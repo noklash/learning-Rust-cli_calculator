@@ -1,6 +1,6 @@
-use std::io::{self, BufRead};
+use std::io::{self, Write}; // Removed unused BufRead, added Write
 
-#[derive(Debug)] // ← lets us print Todo easily for debugging
+#[derive(Debug)]
 struct Todo {
     id: u32,
     task: String,
@@ -11,71 +11,64 @@ fn main() {
     let mut todos: Vec<Todo> = Vec::new();
     let mut next_id: u32 = 1;
 
-    println!("=== TODO APP (add/list/done/quit) ===");
+    println!("=== GMMAWAVE TODO CLI ===");
+    println!("Commands: add <task>  |  list  |  done <id>  |  quit\n");
 
     loop {
-        print!("\n> ");
-        io::stdout().flush().unwrap(); // makes sure prompt shows immediately
+        print!("> ");
+        io::stdout().flush().unwrap();
 
-        let mut input = String::new();
-        io::stdin()
-            .read_line(&mut input)
-            .expect("Error reading input");
+        let mut input_buffer = String::new();
+        io::stdin().read_line(&mut input_buffer).expect("Failed to read");
+        
+        // Convert to lowercase and get a string slice (&str) for matching
+        let input = input_buffer.trim().to_lowercase();
+        let input_slice = input.as_str(); 
 
-        let input = input.trim().to_lowercase();
-
-        if input == "quit" {
-            println!("Goodbye!");
-            break;
-        }
-
-        if input.starts_with("add ") {
-            let task = input.strip_prefix("add ").unwrap().trim().to_string();
-            if task.is_empty() {
-                println!("Please enter a task after 'add'");
-                continue;
+        match input_slice {
+            "quit" => {
+                println!("See you next time! 👋");
+                break;
             }
-
-            todos.push(Todo {
-                id: next_id,
-                task,
-                completed: false,
-            });
-
-            println!("Added task #{}", next_id);
-            next_id += 1;
-        }
-        else if input == "list" {
-            if todos.is_empty() {
-                println!("No tasks yet!");
-            } else {
-                for todo in &todos {
-                    let mark = if todo.completed { "[x]" } else { "[ ]" };
-                    println!("{} {} {}", todo.id, mark, todo.task);
-                }
-            }
-        }
-        else if input.starts_with("done ") {
-            let id_part = input.strip_prefix("done ").unwrap().trim();
-            if let Ok(id) = id_part.parse::<u32>() {
-                let mut found = false;
-                for todo in &mut todos {
-                    if todo.id == id {
-                        todo.completed = true;
-                        println!("Marked task #{} as done!", id);
-                        found = true;
-                        break;
+            "list" => {
+                if todos.is_empty() {
+                    println!("No tasks yet.");
+                } else {
+                    for todo in &todos {
+                        let mark = if todo.completed { "[✔]" } else { "[ ]" };
+                        println!("{:3} {} {}", todo.id, mark, todo.task);
                     }
                 }
-                if !found {
-                    println!("Task #{} not found.", id);
-                }
-            } else {
-                println!("Invalid ID — use a number");
             }
-        }
-        else {
-            println!("Unknown command. Try: add [task] / list / done [id] / quit");
+            // Use 'guards' (the 'if' part) to handle dynamic strings in match
+            s if s.starts_with("add ") => {
+                let task = s.strip_prefix("add ").unwrap().trim();
+                if !task.is_empty() {
+                    todos.push(Todo {
+                        id: next_id,
+                        task: task.to_string(),
+                        completed: false,
+                    });
+                    println!("✓ Added task #{}", next_id);
+                    next_id += 1;
+                }
+            }
+            s if s.starts_with("done ") => {
+                let id_part = s.strip_prefix("done ").unwrap().trim();
+                if let Ok(id) = id_part.parse::<u32>() {
+                    let mut found = false;
+                    for todo in &mut todos {
+                        if todo.id == id {
+                            todo.completed = true;
+                            println!("✓ Task #{} marked done", id);
+                            found = true;
+                            break;
+                        }
+                    }
+                    if !found { println!("Task not found."); }
+                }
+            }
+            _ => println!("Unknown command."),
         }
     }
 }
